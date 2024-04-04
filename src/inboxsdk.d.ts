@@ -38,8 +38,6 @@ import type ListRouteView from './platform-implementation-js/views/route-view/li
 import type SectionView from './platform-implementation-js/views/section-view';
 import type { RouteParams } from './platform-implementation-js/namespaces/router';
 
-export { setInjectScriptImplementation } from './platform-implementation-js/lib/inject-script';
-
 export type { User };
 
 export const LOADER_VERSION: string;
