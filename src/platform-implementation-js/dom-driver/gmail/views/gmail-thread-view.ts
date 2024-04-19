@@ -5,7 +5,9 @@ import kefirStopper from 'kefir-stopper';
 import type { Bus } from 'kefir-bus';
 import findParent from '../../../../common/find-parent';
 import makeMutationObserverChunkedStream from '../../../lib/dom/make-mutation-observer-chunked-stream';
-import querySelector from '../../../lib/dom/querySelectorOrFail';
+import querySelector, {
+  SelectorError,
+} from '../../../lib/dom/querySelectorOrFail';
 import idMap from '../../../lib/idMap';
 import SimpleElementView from '../../../views/SimpleElementView';
 import CustomMessageView from '../../../views/conversations/custom-message-view';
@@ -19,6 +21,11 @@ import { type ContentPanelDescriptor } from '../../../driver-common/sidebar/Cont
 import isStreakAppId from '../../../lib/isStreakAppId';
 import censorHTMLstring from '../../../../common/censorHTMLstring';
 import type GmailRouteView from './gmail-route-view/gmail-route-view';
+import ButtonView from '../widgets/buttons/button-view';
+import BasicButtonViewController, {
+  type Options,
+} from '../../../widgets/buttons/basic-button-view-controller';
+import { type ButtonDescriptor } from '../../../../inboxsdk';
 
 let hasLoggedAddonInfo = false;
 
@@ -625,6 +632,123 @@ class GmailThreadView {
     return view;
   }
 
+  addSubjectButton(button: ButtonDescriptor) {
+    const subjectParent = this._element.querySelector('.V8djrc.byY');
+    if (!subjectParent) {
+      throw new SelectorError('.V8djrc.byY', {
+        cause: 'Subject wrapper element not found',
+      });
+    }
+
+    const buttonOptions = {
+      buttonView: new ButtonView(button),
+      activateFunction: button.activateFunction,
+      onClick: button.onClick,
+    } satisfies Options;
+    const buttonElement = buttonOptions.buttonView.getElement();
+
+    // Sometimes it is there right away
+    const subjectToolbarElement = this.#findSubjectToolbarElement();
+    if (subjectToolbarElement) {
+      subjectToolbarElement.prepend(buttonElement);
+    }
+
+    // Sometimes the container is lazy loaded or re-loaded, so we observe too
+    const observer = new MutationObserver((mutationsList) => {
+      if (mutationsList.some((mutation) => mutation.type === 'childList')) {
+        const subjectToolbarElement = this.#findSubjectToolbarElement();
+        if (
+          subjectToolbarElement &&
+          !subjectToolbarElement.contains(buttonElement)
+        ) {
+          subjectToolbarElement.prepend(buttonElement);
+        }
+      }
+    });
+    observer.observe(subjectParent, {
+      childList: true,
+      subtree: true,
+    });
+
+    this._stopper
+      .takeUntilBy(Kefir.fromEvents(buttonElement, 'destroy'))
+      .onValue(() => buttonOptions.buttonView.destroy());
+
+    Kefir.fromEvents(buttonElement, 'destroy')
+      .take(1)
+      .onValue(() => {
+        observer.disconnect();
+      });
+
+    return new BasicButtonViewController(buttonOptions);
+  }
+
+  addFooterButton(button: ButtonDescriptor) {
+    const footerParent = this._element.querySelector('.gA.gt.acV');
+    if (!footerParent) {
+      throw new SelectorError('.gA.gt.acV', {
+        cause: 'Footer buttons wrapper element not found',
+      });
+    }
+
+    const buttonOptions = {
+      buttonView: new ButtonView(button),
+      activateFunction: button.activateFunction,
+      onClick: button.onClick,
+    } satisfies Options;
+    const buttonElement = buttonOptions.buttonView.getElement();
+
+    const spacer = document.createElement('span');
+    const spacerID = 'inboxsdk__thread_view_footer_button_spacer';
+    spacer.style.width = '8px';
+    spacer.id = spacerID;
+
+    // Sometimes it is there right away
+    const subjectToolbarElement = this.#findBottomReplyToolbarElement();
+    if (subjectToolbarElement) {
+      const reactionButton = this._element.querySelector('.amn .wrsVRe');
+      if (reactionButton && !this._element.querySelector(`#${spacerID}`)) {
+        subjectToolbarElement.appendChild(spacer);
+      }
+
+      subjectToolbarElement.appendChild(buttonElement);
+    }
+
+    // Sometimes the container is lazy loaded or re-loaded, so we observe too
+    const observer = new MutationObserver((mutationsList) => {
+      if (mutationsList.some((mutation) => mutation.type === 'childList')) {
+        const subjectToolbarElement = this.#findBottomReplyToolbarElement();
+        if (
+          subjectToolbarElement &&
+          !subjectToolbarElement.contains(buttonElement)
+        ) {
+          const reactionButton = this._element.querySelector('.amn .wrsVRe');
+          if (reactionButton && !this._element.querySelector(`#${spacerID}`)) {
+            subjectToolbarElement.appendChild(spacer);
+          }
+
+          subjectToolbarElement.appendChild(buttonElement);
+        }
+      }
+    });
+    observer.observe(footerParent, {
+      childList: true,
+      subtree: true,
+    });
+
+    this._stopper
+      .takeUntilBy(Kefir.fromEvents(buttonElement, 'destroy'))
+      .onValue(() => buttonOptions.buttonView.destroy());
+
+    Kefir.fromEvents(buttonElement, 'destroy')
+      .take(1)
+      .onValue(() => {
+        observer.disconnect();
+      });
+
+    return new BasicButtonViewController(buttonOptions);
+  }
+
   _setupToolbarView() {
     const toolbarElement = this._findToolbarElement();
 
@@ -685,6 +809,18 @@ class GmailThreadView {
     }
 
     return null;
+  }
+
+  #findSubjectToolbarElement(): HTMLElement | null {
+    var toolbarContainerElement =
+      this._element.querySelector<HTMLElement>('.bHJ');
+    return toolbarContainerElement;
+  }
+
+  #findBottomReplyToolbarElement(): HTMLElement | null {
+    var toolbarContainerElements =
+      this._element.querySelectorAll<HTMLElement>('table .amn');
+    return toolbarContainerElements[0];
   }
 
   _isToolbarContainerRelevant(toolbarContainerElement: HTMLElement): boolean {

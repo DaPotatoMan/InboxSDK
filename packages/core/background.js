@@ -14,7 +14,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (browser.scripting) {
       // MV3
       browser.scripting.executeScript({
-        target: { tabId: sender.tab.id },
+        target: { tabId: sender.tab.id, frameIds: [sender.frameId] },
         world: 'MAIN',
         files: ['pageWorld.js'],
       });

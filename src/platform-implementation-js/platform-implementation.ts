@@ -66,7 +66,10 @@ export class PlatformImplementation extends SafeEventEmitter {
   Toolbars: Toolbars;
   ButterBar: ButterBar;
   Widgets: Widgets;
-  Global: Global | null | undefined;
+  Global!: Global;
+  /**
+   * @deprecated
+   */
   Modal: Modal | null | undefined;
   Logger: AppLogger;
 
@@ -93,14 +96,7 @@ export class PlatformImplementation extends SafeEventEmitter {
       ],
       [
         GmailMessageView,
-        (viewDriver) =>
-          new MessageView(
-            viewDriver,
-            appId,
-            membrane,
-            this.Conversations,
-            driver,
-          ),
+        (viewDriver) => new MessageView(viewDriver, membrane, driver),
       ],
       [
         GmailThreadView,

@@ -369,6 +369,11 @@ div.T-I.inboxsdk__button {
   min-width: 27px;
 }
 
+/* subject line buttons */
+div.bHJ .inboxsdk__button {
+  margin: 0 2px 0 10px;
+}
+
 .inboxsdk__no_bg {
   background: none;
 }
@@ -427,6 +432,21 @@ div.T-I.inboxsdk__button {
   border-top: 1px solid #2f6124;
   color: #fff;
   text-shadow: none;
+}
+
+/* For the outline style button (ams). We need to counteract a few of gmail's styles */
+.ams.inboxsdk__button::before {
+  width: 0;
+  margin: 0;
+}
+
+.ams.inboxsdk__button:focus {
+  background: rgb(0 0 0 / 0%);
+}
+
+.ams.inboxsdk__button .asa:not(.bjy)::after {
+  width: auto;
+  height: auto;
 }
 
 .inboxsdk__menu {
